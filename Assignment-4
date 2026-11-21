@@ -1,1 +1,51 @@
+import csv
+    filenames = _event_filenames(result.event_groups)
+    for event, participants in result.event_groups.items():
+        with (folder / filenames[event]).open("w", newline="", encoding="utf-8") as out:
+            writer = csv.writer(out)
+            writer.writerow(["Register", "Name", "Department", "Email"])
+            for r in participants:
+                writer.writerow([r["register"], r["name"], r["department"], r["email"]])
 
+    with (folder / "summary.txt").open("w", encoding="utf-8") as out:
+        out.write(f"Unique registrations: {len(result.master)}\n")
+        out.write(f"Events: {len(result.event_groups)}\n")
+        for event, participants in sorted(result.event_groups.items()):
+            out.write(f"{event}: {len(participants)} participants\n")
+        out.write(f"Duplicate registrations: {len(result.duplicates)}\n")
+        out.write(f"Rejected/missing file records: {len(result.errors)}\n")
+
+    with (folder / "error_log.txt").open("w", encoding="utf-8") as out:
+        for filename, line_no, reason in result.errors:
+            out.write(f"{filename}, line {line_no}: {reason}\n")
+        for filename, line_no, reg in result.duplicates:
+            out.write(f"{filename}, line {line_no}: duplicate register {reg}\n")
+
+
+def compile_fest(folder, departments=DEPARTMENTS):
+    """Compile all department files in `folder`; returns a CompileResult."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    result = CompileResult()
+
+    for dept in departments:
+        path = folder / f"{dept}.txt"
+        if not path.exists():
+            result.errors.append((str(path), 0, "missing department file"))
+            continue
+        _parse_file(path, result)
+
+    _write_outputs(folder, result)
+    return result
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    folder = argv[0] if argv else "department_files"
+    r = compile_fest(folder)
+    print(f"Unique: {len(r.master)}, Events: {len(r.event_groups)}, "
+          f"Errors: {len(r.errors)}, Duplicates: {len(r.duplicates)}")
+
+
+if __name__ == "__main__":
+    main()

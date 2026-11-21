@@ -1,1 +1,90 @@
+# Task B4 - Final engineering decision (complete program)
+import random
+import sqlite3
+import time
 
+# ---------- B4.1 Lexicon sentiment with negation ----------
+POSITIVE = {"good", "clean", "fast", "helpful", "improved"}
+NEGATIVE = {"bad", "dirty", "slow", "rude", "smoke", "broken"}
+NEGATORS = {"not", "never", "no"}
+
+
+def score(text):
+    words = text.lower().replace(".", " ").replace(",", " ").split()
+    total = 0
+    previous = ""
+    for word in words:
+        value = 1 if word in POSITIVE else -1 if word in NEGATIVE else 0
+        if previous in NEGATORS:
+            value = -value
+        total += value
+        previous = word
+    return total
+
+
+def label(text):
+    value = score(text)
+    return "positive" if value > 0 else "negative" if value < 0 else "neutral"
+
+
+examples = [
+    "Roads are clean and the bus was fast.",
+    "Smoke from the factory, air is bad.",
+    "The staff were not helpful.",
+    "Not bad, service improved.",
+]
+
+print("B4.1 SENTIMENT LABELS")
+for complaint in examples:
+    print(f"{label(complaint):8} | {complaint}")
+
+print("\nLIKELY MISCLASSIFICATIONS")
+for complaint in ["The road is not only dirty, it is dangerous",
+                  "The air is not very clean",
+                  "Wonderful, another day of smoke"]:
+    print(f"{label(complaint):8} | {complaint}")
+
+# ---------- B4.2 Check the database ----------
+random.seed(1)
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE aq (station TEXT, day TEXT, pm25 REAL)")
+
+rows = [("Station" + str(s),
+         "2026-%02d-%02d" % (d // 28 + 1, d % 28 + 1),
+         round(random.uniform(10, 300), 1))
+        for s in range(12) for d in range(365) for _ in range(24)]
+rows += [("Adyar", "2026-10-01", 48.0), ("Adyar", "2026-10-01", 52.0)]
+
+con.executemany("INSERT INTO aq VALUES (?, ?, ?)", rows)
+print("\nB4.2 TABLE ROWS:", len(rows))
+
+QUERY = ("SELECT AVG(pm25) FROM aq "
+         "WHERE station = 'Adyar' AND day = '2026-10-01'")
+
+
+def time_query(repeats=100):
+    start = time.perf_counter()
+    for _ in range(repeats):
+        con.execute(QUERY).fetchone()
+    return time.perf_counter() - start
+
+
+print("BEFORE INDEX plan:",
+      con.execute("EXPLAIN QUERY PLAN " + QUERY).fetchall()[0][3])
+before = time_query()
+
+con.execute("CREATE INDEX idx_aq_station_day ON aq(station, day)")
+
+print("AFTER INDEX plan :",
+      con.execute("EXPLAIN QUERY PLAN " + QUERY).fetchall()[0][3])
+after = time_query()
+
+print("Result:", con.execute(QUERY).fetchone()[0])
+print("100 queries before index:", round(before, 4), "seconds")
+print("100 queries after index :", round(after, 4), "seconds")
+con.close()
+
+# ---------- B4.3 Production volume estimate ----------
+per_year = 4 * 24 * 365 * 100
+print("\nB4.3 READINGS PER YEAR (100 stations, every 15 minutes):",
+      format(per_year, ","))

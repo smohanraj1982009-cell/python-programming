@@ -1,1 +1,114 @@
+# TASK 12 - Re-evaluate and Adapt the Design
+# Milk Rate Calculator with Seasonal Rates and Bonus
 
+# Rate constants
+SUMMER_BASE_RATE = 32.00
+SUMMER_FAT_STEP_RATE = 0.45
+
+OTHER_BASE_RATE = 30.00
+OTHER_FAT_STEP_RATE = 0.40
+
+BONUS_RATE = 0.50
+BONUS_LIMIT = 500
+
+# One fat step = 0.1 fat percentage
+FAT_STEP_SIZE = 0.10
+
+
+# Function to select seasonal rate
+def get_rate_card(month):
+    if 4 <= month <= 6:
+        return SUMMER_BASE_RATE, SUMMER_FAT_STEP_RATE
+    else:
+        return OTHER_BASE_RATE, OTHER_FAT_STEP_RATE
+
+
+# Function to calculate milk rate
+def calculate_milk_rate(fat, snf, month):
+    base_rate, fat_step_rate = get_rate_card(month)
+
+    fat_steps = fat / FAT_STEP_SIZE
+    milk_rate = base_rate + (fat_steps * fat_step_rate)
+
+    return round(milk_rate, 2)
+
+
+# Function to calculate milk payment
+def calculate_payment(litres, milk_rate):
+    return round(litres * milk_rate, 2)
+
+
+# Function to calculate 10-day bonus
+def calculate_bonus(total_litres):
+    if total_litres > BONUS_LIMIT:
+        return round(total_litres * BONUS_RATE, 2)
+    else:
+        return 0.00
+
+
+# Function to display milk details
+def display_result(fat, snf, litres, month):
+    base_rate, fat_step_rate = get_rate_card(month)
+
+    milk_rate = calculate_milk_rate(fat, snf, month)
+    payment = calculate_payment(litres, milk_rate)
+
+    print("-----------------------------------")
+    print("      MILK PAYMENT DETAILS")
+    print("-----------------------------------")
+    print("Fat Value       :", format(fat, ".2f"))
+    print("SNF Value       :", format(snf, ".2f"))
+    print("Milk Quantity   :", litres, "litres")
+    print("Base Rate      : Rs.", base_rate)
+    print("Fat Step Rate  : Rs.", fat_step_rate)
+    print("Milk Rate      : Rs.", milk_rate)
+    print("Milk Payment   : Rs.", payment)
+    print("-----------------------------------")
+
+
+# Test 1: April to June seasonal rate
+print("\nTEST 1 - APRIL TO JUNE")
+display_result(4.25, 8.65, 20, 5)
+
+
+# Test 2: Other season
+print("\nTEST 2 - OTHER SEASON")
+display_result(4.25, 8.65, 20, 2)
+
+
+# Test 3: Bonus eligible
+print("\nTEST 3 - BONUS ELIGIBILITY")
+total_litres = 600
+bonus = calculate_bonus(total_litres)
+
+print("Total 10-day supply :", total_litres, "litres")
+print("Bonus Amount         : Rs.", bonus)
+
+
+# Test 4: Bonus not eligible
+print("\nTEST 4 - BONUS NOT ELIGIBLE")
+total_litres = 500
+bonus = calculate_bonus(total_litres)
+
+print("Total 10-day supply :", total_litres, "litres")
+print("Bonus Amount         : Rs.", bonus)
+
+
+# Test 5: Two-decimal fat reading
+print("\nTEST 5 - DECIMAL FAT READING")
+fat = 4.27
+snf = 8.62
+month = 4
+
+milk_rate = calculate_milk_rate(fat, snf, month)
+
+print("Fat :", fat)
+print("SNF :", snf)
+print("Calculated Milk Rate : Rs.", milk_rate)
+
+
+# Final evaluation
+print("\nDESIGN EVALUATION")
+print("Original design is modified and retained.")
+print("Decimal readings and seasonal rates are supported.")
+print("Bonus calculation is added as a separate function.")

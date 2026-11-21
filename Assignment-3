@@ -1,1 +1,114 @@
+import random
+import string
+import time
 
+
+# Normalize phone numbers
+def normalise_phone(phone):
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+
+    if len(digits) == 12 and digits.startswith("91"):
+        digits = digits[2:]
+
+    return digits
+
+
+# Normalize names
+def normalise_name(name):
+    return " ".join((name or "").lower().split())
+
+
+# Merge duplicate contacts
+def merge_contacts(records):
+    merged = {}
+
+    for record in records:
+        name = record.get("name", "").strip()
+        phone = record.get("phone", "")
+        email = record.get("email", "").strip().lower()
+
+        normal_phone = normalise_phone(phone)
+
+        if normal_phone:
+            key = ("phone", normal_phone)
+        else:
+            key = ("fallback", normalise_name(name), email)
+
+        if key not in merged:
+            merged[key] = {
+                "name": name,
+                "phones": set(),
+                "emails": set()
+            }
+
+        if name and not merged[key]["name"]:
+            merged[key]["name"] = name
+
+        if normal_phone:
+            merged[key]["phones"].add(normal_phone)
+
+        if email:
+            merged[key]["emails"].add(email)
+
+    return merged
+
+
+# Sample contact records
+contacts = [
+    {
+        "name": "Dr. Ravi",
+        "phone": "+91 98400 12345",
+        "email": "ravi@example.com"
+    },
+    {
+        "name": "ravi kumar",
+        "phone": "9840012345",
+        "email": "RAVI@example.com"
+    },
+    {
+        "name": "Meena",
+        "phone": "9000011111",
+        "email": "meena@example.com"
+    },
+    {
+        "name": "Unknown",
+        "phone": "",
+        "email": "unknown@example.com"
+    },
+    {
+        "name": "Meena",
+        "phone": "90000-11111",
+        "email": ""
+    }
+]
+
+
+# Merge and display contacts
+result = merge_contacts(contacts)
+
+for key, value in result.items():
+    print(value["name"], sorted(value["phones"]), sorted(value["emails"]))
+
+
+# Scale test using synthetic unique contacts
+for n in (1000, 100000):
+
+    sample = [
+        {
+            "name": f"Person {i}",
+            "phone": f"90000{i:06d}",
+            "email": f"p{i}@example.com"
+        }
+        for i in range(n)
+    ]
+
+    start = time.perf_counter()
+    merged_sample = merge_contacts(sample)
+    elapsed = time.perf_counter() - start
+
+    print(n, "contacts processed in", elapsed, "seconds")
+
+
+# Hand-check: the first two records should merge
+# because their normalized phone numbers are identical
+print("Merged contact groups:", len(result))
